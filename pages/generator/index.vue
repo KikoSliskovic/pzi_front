@@ -1,8 +1,9 @@
-<script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+<script setup >
+import { ref, onMounted, watch,onUnmounted } from 'vue';
 import Navbar from '../../components/Navbar.vue';
 import axios from 'axios';
 import { useRuntimeConfig } from 'nuxt/app';
+
 
 const runtimeConfig = useRuntimeConfig();
 
@@ -20,25 +21,26 @@ const date = ref(new Date().toISOString().slice(0, 10)); // Automatski postavi n
 // Pohranjuje kod generiranog QR-a
 const qrCodeValue = ref('');
 const qrImageUrl = ref(''); // Pohrana URL-a QR koda
+let intervalId = null; // Sprema referencu intervala
 
 // Učitaj podatke za dropdown menije
 onMounted(async () => {
   try {
-    const responseProfessors = await axios.get('http://localhost:8000/api/professors');
+    const responseProfessors = await axios.get(`${runtimeConfig.public.apiUrl}/api/professors`,{withCredentials: true});
     professors.value = responseProfessors.data;
   } catch (error) {
     console.error('Greška pri učitavanju profesora:', error);
   }
 
   try {
-    const responseSubjects = await axios.get('http://localhost:8000/api/subjects');
+    const responseSubjects = await axios.get(`${runtimeConfig.public.apiUrl}/api/subjects`,{withCredentials: true});
     subjects.value = responseSubjects.data;
   } catch (error) {
     console.error('Greška pri učitavanju kolegija:', error);
   }
 
   try {
-    const responseClassrooms = await axios.get('http://localhost:8000/api/classrooms');
+    const responseClassrooms = await axios.get(`${runtimeConfig.public.apiUrl}/api/classrooms`,{withCredentials: true});
     classrooms.value = responseClassrooms.data;
   } catch (error) {
     console.error('Greška pri učitavanju učionica:', error);
@@ -49,7 +51,7 @@ onMounted(async () => {
 const getQrImage = async () => {
   if (!qrCodeValue.value) return; // Ako nema koda, ne izvršavaj
   try {
-    const response = await axios.get(`http://pzi.test/qr-code/${qrCodeValue.value}`, { responseType: 'blob' });
+    const response = await axios.get(`${runtimeConfig.public.apiUrl}/qr-code/${qrCodeValue.value}`, { responseType: 'blob' });
     qrImageUrl.value = URL.createObjectURL(response.data);
   } catch (error) {
     console.error('Greška pri dohvaćanju QR slike:', error);
@@ -75,8 +77,19 @@ const generateQRCode = async () => {
 // Auto-refresh svakih 10 sekundi
 watch(qrCodeValue, () => {
   if (qrCodeValue.value) {
-    setInterval(getQrImage, 10000);
+    if (!intervalId) { // Ako već ne postoji interval, pokreni ga
+      intervalId = setInterval(getQrImage, 10000);
+    }
+  } else {
+    clearInterval(intervalId);
+    intervalId = null;
   }
+});
+
+// Kada komponenta nestane (stranica se promijeni), ugasi interval
+onUnmounted(() => {
+  clearInterval(intervalId);
+  intervalId = null;
 });
 </script>
 
@@ -85,49 +98,48 @@ watch(qrCodeValue, () => {
   <v-main>
     <div class="background min-h-screen flex flex-col items-center justify-center">
       <div class="box bg-white p-8 rounded-lg shadow-lg flex flex-col items-center justify-center">
-        <div class="inner-box bg-white-100 p-4 rounded-lg shadow-md mb-15">
-          <div v-if="qrImageUrl" class="image-container mb-4">
+         <div v-if="qrImageUrl" class="inner-box bg-white-100 p-4 rounded-lg shadow-md mb-15">
+          <div  class="image-container mb-4">
             <img :src="qrImageUrl" alt="QR kod" class="inner-box-image" />
           </div>
-        </div>
-
-        <div class="dropdown-container flex gap-4 w-full">
+        </div> 
+        <div v-else class="dropdown-container flex flex-col gap-4 w-full">
           <v-select 
-            v-model="selectedProfessor"
-            :items="professors"
-            item-title="name"
-            item-value="id"
-            label="Profesor"
-            outlined
-            dense
-            class="dropdown"
-          ></v-select>
+          v-model="selectedProfessor"
+          :items="professors"
+          item-title="name"
+          item-value="id"
+          label="Profesor"
+          outlined
+          dense
+          class="dropdown mb-4"
+        ></v-select>
 
-          <v-select
-            v-model="selectedSubject"
-            :items="subjects"
-            item-value="id"
-            item-title="subject_name"
-            label="Kolegij"
-            dense
-            outlined
-            class="dropdown"
-          ></v-select>
+        <v-select
+          v-model="selectedSubject"
+          :items="subjects"
+          item-value="id"
+          item-title="subject_name"
+          label="Kolegij"
+          dense
+          outlined
+          class="dropdown mb-4"
+        ></v-select>
 
-          <v-select
-            v-model="selectedClassroom"
-            :items="classrooms"
-            item-title="name"
-            item-value="id"
-            label="Učionica"
-            outlined
-            dense
-            class="dropdown"
-          ></v-select>
+        <v-select
+          v-model="selectedClassroom"
+          :items="classrooms"
+          item-title="name"
+          item-value="id"
+          label="Učionica"
+          outlined
+          dense
+          class="dropdown mb-4"
+        ></v-select>
         </div>
 
-        <div class="rectangle-label-pair mt-4">
-          <v-btn @click="generateQRCode" color="primary" class="rectangleQR mb-2" rounded block>
+        <div v-if="!qrImageUrl" class="rectangle-label-pair mt-4">
+          <v-btn :disabled="!selectedClassroom || !selectedProfessor || !selectedSubject" @click="generateQRCode" color="primary" class="rectangleQR mb-2" rounded block>
             <img src="@/assets/Logo2.png" alt="QR Code" class="qr-code-image" />
           </v-btn>
           <p class="label">Generiraj QR Kod</p>
@@ -156,7 +168,7 @@ watch(qrCodeValue, () => {
 }
 
 .inner-box {
-  max-width: 320px;
+  max-width: 620px;
   width: 100%;
   min-height: 200px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
@@ -175,8 +187,7 @@ watch(qrCodeValue, () => {
 }
 
 .dropdown {
-  flex: 1;
-  border-radius: 20px;
+  width : 100%;
 }
 
 .rectangle-label-pair {

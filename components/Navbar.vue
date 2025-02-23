@@ -7,8 +7,9 @@
     <v-btn class="d-none d-md-flex" color="black" @click="navigateTo({ name: 'profil' })">Profil</v-btn>
     <v-btn class="d-none d-md-flex" color="black" @click="navigateTo({ name: 'skener' })">Skener</v-btn>
     <v-btn class="d-none d-md-flex" color="black" @click="navigateTo({ name: 'table' })">Tablica</v-btn>
-    <v-btn class="d-none d-md-flex" color="black" @click="navigateTo({ name: 'generator' })">Generator</v-btn>
-    <v-btn class="d-none d-md-flex login-button" @click="navigateTo({ name: 'login' })">Prijavi se</v-btn>
+    <v-btn v-if="hasRoles(['admin','profesor'])" class="d-none d-md-flex" color="black" @click="navigateTo({ name: 'generator' })">Generator</v-btn>
+    <v-btn v-if="!user" class="d-none d-md-flex login-button" @click="navigateTo({ name: 'login' })">Prijavi se</v-btn>
+    <v-btn v-else class="d-none d-md-flex login-button" @click="logout">Odjavi se</v-btn>
     <v-btn class="d-md-none" icon @click="drawer = !drawer">
       <v-icon>mdi-menu</v-icon>
     </v-btn>
@@ -25,19 +26,51 @@
   </v-navigation-drawer>
 </template>
 
-<script>
-export default {
-  data() {
-    return {
-      drawer: false,
-    };
-  },
-  methods: {
-    navigateTo(route) {
-      this.$router.push(route);
-    },
-  },
+<script setup>
+import { useRouter } from 'vue-router';
+import axios from 'axios';
+
+const router = useRouter();
+
+const hasRoles=(roles)=>{
+  if(user.value){
+//Ako role.name=role, vrati true
+    return user.value.roles.some(role => roles.includes(role.name));
+  }
+  return false;
+}
+
+const logout = async () => {
+  try {
+    await axios.post(`http://pzi.test/api/logout`, {}, {withCredentials: true});
+    user.value = null;
+    navigateTo({ name: 'login' });
+  } catch (error) {
+    console.error('Greška pri odjavi:', error);
+  }
 };
+
+const navigateTo = (route) => {
+  router.push(route);
+};
+
+const user = ref(null);
+
+const getUser = async () => {
+  try {
+    const response = await axios.get(`http://pzi.test/api/user`, {withCredentials: true});
+    user.value = response.data.user;
+  } catch (error) {
+    console.error('Greška pri dohvaćanju usera:', error);
+  }
+};
+
+onMounted(() => {
+  nextTick(() => {
+    getUser();
+  });
+});
+
 </script>
 
 <style scoped>

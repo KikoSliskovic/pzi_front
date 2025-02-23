@@ -47,7 +47,7 @@ const handleSubmit = async () => {
 
     const data = await response.json();
     if (data.message === 'Login successful') {
-      router.push('/');
+      router.push('/profil');
     } else {
       errorMessage.value = 'Invalid credentials';
     }

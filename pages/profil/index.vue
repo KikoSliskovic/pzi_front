@@ -1,25 +1,49 @@
-<script setup lang="ts">
-import { ref } from 'vue';
+<script setup >
+import axios from 'axios';
+import { nextTick } from 'process';
+import { onMounted, ref } from 'vue';
+import { useRuntimeConfig } from 'nuxt/app';
+
 
 const userData = ref([
-  { title: 'Korisnička oznaka', text: 'Ante Šimić' },
-  { title: 'Datum rođenja', text: '25.2.2003' },
-  { title: 'E-mail', text: 'ante.simic@fpmoz.sum.ba' },
-  { title: 'Uloga', text: 'Ostalo' },
-  { title: 'Organizacija', text: 'FPMOZ' },
-  { title: 'Povezanost s ustanovom', text: 'Student' },
-  { title: 'Edu-ID', text: 'ante.simic@fpmoz.sum.ba' },
-  { title: 'Akademsko zvanje', text: '' },
-  { title: 'Akademski stupanj', text: '' },
 ]);
+
+const runtimeConfig = useRuntimeConfig();
+
+const user = ref(null);
+
+const getUser = async () => {
+  try {
+    const response = await axios.get(`${runtimeConfig.public.apiUrl}/api/user`, {withCredentials: true});
+    user.value = response.data.user;
+    userData.value = [
+      { title: 'Ime', text: response.data.user.name },
+      { title: 'Email', text: response.data.user.email },
+      { title: 'Uloga', text: response.data.user.roles.map(role => role.name).join(', ') },
+      // { title: 'Broj indeksa', text: response.data.user.index_number },
+      // { title: 'Godina studija', text: response.data.user.study_year },
+      // { title: 'Smjer', text: response.data.user.study_program },
+    ];
+  } catch (error) {
+    console.error('Greška pri dohvaćanju usera:', error);
+  }
+};
+
+onMounted(() => {
+  nextTick(() => {
+    getUser();
+  });
+});
+
+
 </script>
 
 <template>
   <Navbar />
   <v-main>
-    <div>
-      <h1 class="blue-title">Moji podaci EDU-ID (Ante Šimić)</h1>
-      <h2 class="ispod-naslova">Profil / Ante Šimić</h2>
+    <div v-if="user">
+      <h1 class="blue-title">Moji podaci EDU-ID ({{ user.name }})</h1>
+      <h2 class="ispod-naslova">Profil / ({{ user.name }})</h2>
       <div class="profile-section">
         <div class="profile-info">
           <div class="profile-picture"></div>

@@ -3,14 +3,17 @@ import { ref, computed, onMounted } from 'vue'
 import Navbar from '../../components/Navbar.vue'
 import axios from "axios";
 import { useRoute } from 'vue-router';
+import { useRuntimeConfig } from 'nuxt/app';
 
 const route = useRoute();
 const lectures = ref([]);
+const runtimeConfig = useRuntimeConfig();
+
 
 const fetchData = async () => {
   try {
     const [lecturesRes, ] = await Promise.all([
-      axios.get("http://localhost:8000/api/lectures"),
+      axios.get(`${runtimeConfig.public.apiUrl}/api/lectures`, { withCredentials: true }),
     ]);
 
     lectures.value = lecturesRes.data;
@@ -21,7 +24,7 @@ const fetchData = async () => {
 
 const storeAttendance = async (qr_code: string, otp: string) => {
   try {
-    const response = await axios.post("http://pzi.test/lecture", {
+    const response = await axios.post(`${runtimeConfig.public.apiUrl}/lecture`, {
       qr_code,
       otp,
     });
@@ -68,7 +71,7 @@ onMounted(() => {
               </thead>
               <tbody>
                 <tr v-for="lecture in lectures" :key="lecture.id">
-                  <td>{{ lecture.subject?.name ?? 'N/A' }}</td>
+                  <td>{{ lecture.user?.name ?? 'N/A' }}</td>
                   <td>{{ lecture.professor?.name ?? 'Nema profesora' }}</td>
                   <td>{{ lecture.subject?.subject_name ?? 'Nema kolegija' }}</td>
                   <td>{{ lecture.classroom?.name ?? 'Nema učionice' }}</td>
