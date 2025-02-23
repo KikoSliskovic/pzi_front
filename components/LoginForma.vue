@@ -21,18 +21,18 @@ const handleSubmit = async () => {
   const password = form.password;
 
   try {
-    // Fetch CSRF token first
-    const csrfResponse = await fetch('http://localhost:8000/sanctum/csrf-cookie', {
-      method: 'GET',
-      credentials: 'include',
-    });
+    // // Fetch CSRF token first
+    // const csrfResponse = await fetch('http://localhost:8000/sanctum/csrf-cookie', {
+    //   method: 'GET',
+    //   credentials: 'include',
+    // });
 
-    if (!csrfResponse.ok) {
-      throw new Error('Failed to fetch CSRF token');
-    }
+    // if (!csrfResponse.ok) {
+    //   throw new Error('Failed to fetch CSRF token');
+    // }
 
     // Proceed with login request
-    const response = await fetch('http://localhost:8000/api/login', {
+    const response = await fetch('http://pzi.test/api/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

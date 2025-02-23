@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
 import axios from "axios";
+import { useRuntimeConfig } from "nuxt/app";
 
 const lectures = ref([]);
+
+// get runtime config
+const runtimeConfig = useRuntimeConfig();
 
 const fetchData = async () => {
   try {
     const [lecturesRes, ] = await Promise.all([
-      axios.get("http://localhost:8000/api/lecture"),
+      axios.get(runtimeConfig.public.apiUrl +"/api/lectures"),
     ]);
 
     lectures.value = lecturesRes.data;

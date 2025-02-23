@@ -2,7 +2,9 @@
 import { ref, computed, onMounted } from 'vue'
 import Navbar from '../../components/Navbar.vue'
 import axios from "axios";
+import { useRoute } from 'vue-router';
 
+const route = useRoute();
 const lectures = ref([]);
 
 const fetchData = async () => {
@@ -17,7 +19,28 @@ const fetchData = async () => {
   }
 };
 
-onMounted(fetchData);
+const storeAttendance = async (qr_code: string, otp: string) => {
+  try {
+    const response = await axios.post("http://pzi.test/lecture", {
+      qr_code,
+      otp,
+    });
+    console.log("Odgovor sa servera:", response.data);
+  } catch (error) {
+    console.error("Greška pri slanju podataka:", error);
+  }
+};
+
+onMounted(() => {
+  fetchData();
+  
+  const qr_code = route.query.v as string;
+  const otp = route.query.otp as string;
+  
+  if (qr_code && otp) {
+    storeAttendance(qr_code, otp);
+  }
+});
 </script>
 
 <template>

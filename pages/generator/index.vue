@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import Navbar from '../../components/Navbar.vue';
 import axios from 'axios';
+import { useRuntimeConfig } from 'nuxt/app';
 
-// Kreiramo reaktivne varijable za dropdown podatke
+const runtimeConfig = useRuntimeConfig();
+
+// Reaktivne varijable za dropdown podatke
 const subjects = ref([]);
 const professors = ref([]);
 const classrooms = ref([]);
@@ -14,40 +17,67 @@ const selectedProfessor = ref(null);
 const selectedClassroom = ref(null);
 const date = ref(new Date().toISOString().slice(0, 10)); // Automatski postavi na danas
 
+// Pohranjuje kod generiranog QR-a
+const qrCodeValue = ref('');
+const qrImageUrl = ref(''); // Pohrana URL-a QR koda
+
+// Učitaj podatke za dropdown menije
 onMounted(async () => {
-  // Učitaj podatke za dropdown menije
   try {
     const responseProfessors = await axios.get('http://localhost:8000/api/professors');
     professors.value = responseProfessors.data;
   } catch (error) {
-    console.error('Error loading data:', error);
+    console.error('Greška pri učitavanju profesora:', error);
   }
 
   try {
     const responseSubjects = await axios.get('http://localhost:8000/api/subjects');
     subjects.value = responseSubjects.data;
   } catch (error) {
-    console.error('Error loading data:', error);
+    console.error('Greška pri učitavanju kolegija:', error);
   }
 
   try {
     const responseClassrooms = await axios.get('http://localhost:8000/api/classrooms');
     classrooms.value = responseClassrooms.data;
   } catch (error) {
-    console.error('Error loading data:', error);
+    console.error('Greška pri učitavanju učionica:', error);
   }
-
 });
 
-const generateQRCode = () => {
-  console.log('QR Code generation triggered!');
-  // You can add logic to generate the QR code here
+// Funkcija za dohvat QR slike
+const getQrImage = async () => {
+  if (!qrCodeValue.value) return; // Ako nema koda, ne izvršavaj
+  try {
+    const response = await axios.get(`http://pzi.test/qr-code/${qrCodeValue.value}`, { responseType: 'blob' });
+    qrImageUrl.value = URL.createObjectURL(response.data);
+  } catch (error) {
+    console.error('Greška pri dohvaćanju QR slike:', error);
+  }
 };
 
-const showImage = ref(false);  // Reactive variable to control visibility of the image
-const toggleImage = () => {
-  showImage.value = !showImage.value;  // Toggle the value of showImage
-}
+// Generiraj QR kod i pohrani vrijednost
+const generateQRCode = async () => {
+  try {
+    const response = await axios.post(runtimeConfig.public.apiUrl + '/generate-qr', {
+      professor_id: selectedProfessor.value || 1,
+      subject_id: selectedSubject.value || 1,
+      classroom_id: selectedClassroom.value || 1,
+    }, { withCredentials: true });
+
+    qrCodeValue.value = response.data.value; // Pohrani generirani QR kod
+    await getQrImage(); // Dohvati QR sliku odmah nakon generacije
+  } catch (error) {
+    console.error('Greška pri generiranju QR koda:', error);
+  }
+};
+
+// Auto-refresh svakih 10 sekundi
+watch(qrCodeValue, () => {
+  if (qrCodeValue.value) {
+    setInterval(getQrImage, 10000);
+  }
+});
 </script>
 
 <template>
@@ -55,22 +85,13 @@ const toggleImage = () => {
   <v-main>
     <div class="background min-h-screen flex flex-col items-center justify-center">
       <div class="box bg-white p-8 rounded-lg shadow-lg flex flex-col items-center justify-center">
-        <!-- Inner Box -->
         <div class="inner-box bg-white-100 p-4 rounded-lg shadow-md mb-15">
-          <!-- PNG Image Inside the Inner Box -->
-           <!-- Conditionally render the image when showImage is true -->
-          <div v-if="!showImage" class="image-container mb-4">
-            <img src="C:\laragon\www\Projekt PZI najnovije\pzi_projekt_frontend\assets\2.png" alt="QR-code image" class="inner-box-image" />
-          </div>
-          <div v-if="showImage" class="image-container mb-4">
-            <img src="C:\laragon\www\Projekt PZI najnovije\pzi_projekt_frontend\assets\1.png" alt="QR-code image" class="inner-box-image" />
+          <div v-if="qrImageUrl" class="image-container mb-4">
+            <img :src="qrImageUrl" alt="QR kod" class="inner-box-image" />
           </div>
         </div>
-        <!-- Rectangles and Labels -->
 
-        <!-- Dropdown meniji u jednom redu -->
         <div class="dropdown-container flex gap-4 w-full">
-          
           <v-select 
             v-model="selectedProfessor"
             :items="professors"
@@ -105,17 +126,12 @@ const toggleImage = () => {
           ></v-select>
         </div>
 
-        <!-- Generiraj QR Kod -->
         <div class="rectangle-label-pair mt-4">
-
-          <v-btn @click="toggleImage" color="primary" 
-            class="rectangleQR mb-2" rounded block>
+          <v-btn @click="generateQRCode" color="primary" class="rectangleQR mb-2" rounded block>
             <img src="@/assets/Logo2.png" alt="QR Code" class="qr-code-image" />
           </v-btn>
-
           <p class="label">Generiraj QR Kod</p>
         </div>
-
       </div>
     </div>
   </v-main>
@@ -143,21 +159,12 @@ const toggleImage = () => {
   max-width: 320px;
   width: 100%;
   min-height: 200px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); /* Shadow for inner box */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
 .inner-box-image {
   width: 100%;
-  max-width: auto;  /* Adjust the size as needed */
   height: auto;
-}
-
-.rectangles-container {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
 }
 
 .dropdown-container {
@@ -168,8 +175,8 @@ const toggleImage = () => {
 }
 
 .dropdown {
-  flex: 1; /* Omogućuje da svi dropdowni zauzmu jednaku širinu */
-  border-radius: 20px; /* Zaobljeni rubovi */
+  flex: 1;
+  border-radius: 20px;
 }
 
 .rectangle-label-pair {
@@ -180,33 +187,21 @@ const toggleImage = () => {
   padding-top: 3%;
 }
 
-.rectangle {
-  width: 10px;
-  height: 20px;
-  background-color: white;
-  border: 1.5px solid #ccc;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .rectangleQR {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100px;  /* Set a fixed width for a square shape */
-  height: 50px; /* Set a fixed height to match the width */
-  padding: 0;    /* Remove padding to keep it perfectly square */
-  border-radius: 8px; /* Slightly rounded corners */
+  width: 100px;
+  height: 50px;
+  padding: 0;
+  border-radius: 8px;
 }
 
 .qr-code-image {
   max-width: 15%;
   max-height: 15%;
-  object-fit: contain; /* Ensures the logo fits within the button */
+  object-fit: contain;
 }
-
 
 .label {
   color: gray;
