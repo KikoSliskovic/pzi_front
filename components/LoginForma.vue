@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useRuntimeConfig } from 'nuxt/app';
+
+const runtimeConfig = useRuntimeConfig();
 
 interface LoginForm {
   email: string;
@@ -32,7 +35,7 @@ const handleSubmit = async () => {
     // }
 
     // Proceed with login request
-    const response = await fetch('http://pzi.test/api/login', {
+    const response = await fetch(`${runtimeConfig.public.apiUrl}/api/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

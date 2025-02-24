@@ -29,6 +29,9 @@
 <script setup>
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import { useRuntimeConfig } from 'nuxt/app';
+
+const runtimeConfig = useRuntimeConfig();
 
 const router = useRouter();
 
@@ -42,7 +45,7 @@ const hasRoles=(roles)=>{
 
 const logout = async () => {
   try {
-    await axios.post(`http://pzi.test/api/logout`, {}, {withCredentials: true});
+    await axios.post(`${runtimeConfig.public.apiUrl}/api/logout`, {}, {withCredentials: true});
     user.value = null;
     navigateTo({ name: 'login' });
   } catch (error) {
@@ -58,7 +61,7 @@ const user = ref(null);
 
 const getUser = async () => {
   try {
-    const response = await axios.get(`http://pzi.test/api/user`, {withCredentials: true});
+    const response = await axios.get(`${runtimeConfig.public.apiUrl}/api/user`, {withCredentials: true});
     user.value = response.data.user;
   } catch (error) {
     console.error('Greška pri dohvaćanju usera:', error);
