@@ -78,7 +78,7 @@ const generateQRCode = async () => {
 watch(qrCodeValue, () => {
   if (qrCodeValue.value) {
     if (!intervalId) { // Ako već ne postoji interval, pokreni ga
-      intervalId = setInterval(getQrImage, 10000);
+      intervalId = setInterval(getQrImage, 100000);
     }
   } else {
     clearInterval(intervalId);

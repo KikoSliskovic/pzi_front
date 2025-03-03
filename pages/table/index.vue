@@ -27,7 +27,7 @@ const storeAttendance = async (qr_code: string, otp: string) => {
     const response = await axios.post(`${runtimeConfig.public.apiUrl}/lecture`, {
       qr_code,
       otp,
-    });
+    },{ withCredentials: true });
     console.log("Odgovor sa servera:", response.data);
   } catch (error) {
     console.error("Greška pri slanju podataka:", error);
